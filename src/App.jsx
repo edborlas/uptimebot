@@ -1,60 +1,30 @@
-import React, { useEffect, useState, useRef } from "react";
-import { pingHost } from "./utils/ping";
+import React, { useEffect, useState } from "react";
 import MonitorCard from "./components/MonitorCard";
 
-const intervalSec = 5; // seconds
-const timeoutMm = intervalSec * 1000; // mmilliseconds
-
-const defaultMonitors = [
-  { name: "Google", url: "https://www.google.com", protocol: "HTTP", interval: intervalSec },
-  { name: "GitHub", url: "https://github.com", protocol: "HTTP", interval: intervalSec },
-  { name: "Observa", url: "https://observanow.com", protocol: "HTTP", interval: intervalSec },
-  { name: "API Server", url: "http://20.29.187.121", protocol: "HTTP", interval: intervalSec },
-  { name: "Observa API", url: "https://www.observanow.com/api2/", protocol: "HTTP", interval: intervalSec },
-  { name: "Observa Internal Company", url: "https://www.observanow.com/internal/company/", protocol: "HTTP", interval: intervalSec },
-];
+const POLL_MS = 30 * 1000; // poll server every 30s for UI updates
 
 function App() {
-  const [monitors, setMonitors] = useState(defaultMonitors.map(m => ({ ...m, status: "loading", latency: null })));
-  const monitorsRef = useRef(monitors);
-  const mountedRef = useRef(true);
-
-  // keep a ref in sync so runPings can read the latest list without depending on it
-  useEffect(() => {
-    monitorsRef.current = monitors;
-  }, [monitors]);
+  const [monitors, setMonitors] = useState([]);
 
   useEffect(() => {
-    mountedRef.current = true;
+    let mounted = true;
 
-    const runPings = () => {
-      // mark monitors as checking (optional)
-      setMonitors(prev => prev.map(m => ({ ...m, status: 'checking' })));
-
-      // fire off a ping for each monitor without awaiting all of them
-      for (const monitor of monitorsRef.current) {
-        (async (mon) => {
-          try {
-            const result = await pingHost(mon.url);
-            if (!mountedRef.current) return;
-            setMonitors(prev => prev.map(m => m.url === mon.url ? { ...m, ...result } : m));
-          } catch (err) {
-            if (!mountedRef.current) return;
-            // on error, mark that monitor as down but don't block others
-            setMonitors(prev => prev.map(m => m.url === mon.url ? { ...m, status: 'down', latency: null } : m));
-          }
-        })(monitor);
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch('http://localhost:4100/status');
+        if (!res.ok) throw new Error('bad status');
+        const data = await res.json();
+        if (!mounted) return;
+        // server uses ISO timestamps in lastChecked and downSince
+        setMonitors(data.monitors || []);
+      } catch (err) {
+        console.error('Failed to fetch status', err);
       }
     };
 
-    // initial run and periodic interval
-    runPings();
-    const interval = setInterval(runPings, timeoutMm); // refresh every intervalSec
-
-    return () => {
-      mountedRef.current = false;
-      clearInterval(interval);
-    };
+    fetchStatus();
+    const id = setInterval(fetchStatus, POLL_MS);
+    return () => { mounted = false; clearInterval(id); };
   }, []);
 
   return (
