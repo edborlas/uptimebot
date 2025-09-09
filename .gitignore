@@ -3,3 +3,8 @@ logs/down.log
 .dev_pid
 .pinger_pid
 app.log
+app.log
+pinger.log
+logs/up.log
+dist/assets/index-f9a933a7.js
+dist/assets/index-9840255a.css

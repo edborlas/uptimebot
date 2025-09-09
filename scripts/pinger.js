@@ -1,13 +1,18 @@
 //#!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
-const http = require('http');
-const https = require('https');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import http from 'http';
+import https from 'https';
 
 // Configuration
 const INTERVAL_MIN = 5; // minutes
 const INTERVAL_MS = INTERVAL_MIN * 60 * 1000;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const LOG_DIR = path.resolve(__dirname, '..', 'logs');
+
 const UP_LOG = path.join(LOG_DIR, 'up.log');
 const DOWN_LOG = path.join(LOG_DIR, 'down.log');
 const MAX_BYTES = 1024 * 1024; // 1MB
@@ -122,4 +127,13 @@ server.listen(PORT, () => console.log(`Pinger server listening on http://localho
 loop();
 setInterval(loop, INTERVAL_MS);
 
-if (require.main !== module) module.exports = { loop, latest };
+// Export the functions for use in other modules
+export { loop, latest };
+
+// Check if the script is run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+  console.log('Running pinger.js directly');
+  // Loop only if the script is run directly
+  loop();
+  setInterval(loop, INTERVAL_MS);
+}
