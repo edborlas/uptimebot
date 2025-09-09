@@ -1,2 +1,5 @@
 logs/up.log
 logs/down.log
+.dev_pid
+.pinger_pid
+app.log
