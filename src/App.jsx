@@ -6,6 +6,7 @@ const POLL_MS = 30 * 1000; // poll server every 30s for UI updates
 function App() {
   const [monitors, setMonitors] = useState([]);
   const [modalContent, setModalContent] = useState(null);
+  const [selectedLog, setSelectedLog] = useState("pinger"); // State for dropdown selection
 
   useEffect(() => {
     let mounted = true;
@@ -48,30 +49,26 @@ function App() {
     <div className="max-w-3xl mx-auto mt-10 px-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Uptime Monitors</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <div className="flex flex-col justify-center h-[42px] text-center">
+            <label htmlFor="log-select" className="text-xs font-medium text-gray-700 mb-1">Select Log</label>
+            <select
+              id="log-select"
+              className="border border-gray-300 rounded px-4 py-0.5 bg-white text-gray-700 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={selectedLog}
+              onChange={(e) => setSelectedLog(e.target.value)}
+            >
+              <option value="pinger">Pinger Log</option>
+              <option value="app">App Log</option>
+              <option value="up">Up Log</option>
+              <option value="down">Down Log</option>
+            </select>
+          </div>
           <button
-            className="bg-blue-500 text-white px-4 py-2 rounded"
-            onClick={() => fetchLog("pinger")}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 h-[42px]"
+            onClick={() => fetchLog(selectedLog)}
           >
-            View Pinger Log
-          </button>
-          <button
-            className="bg-blue-500 text-white px-4 py-2 rounded"
-            onClick={() => fetchLog("app")}
-          >
-            View App Log
-          </button>
-          <button
-            className="bg-blue-500 text-white px-4 py-2 rounded"
-            onClick={() => fetchLog("up")}
-          >
-            View Up Log
-          </button>
-          <button
-            className="bg-blue-500 text-white px-4 py-2 rounded"
-            onClick={() => fetchLog("down")}
-          >
-            View Down Log
+            View Log
           </button>
         </div>
       </div>
@@ -87,7 +84,7 @@ function App() {
             className="bg-white p-4 rounded max-w-lg w-full max-h-[80%] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold mb-2 text-black">{modalContent.title}</h2> {/* Display title */}
+            <h2 className="text-lg font-bold mb-2 text-black">{modalContent.title}</h2>
             <pre className="whitespace-pre-wrap text-[9px] text-black">{modalContent.content}</pre>
           </div>
         </div>
