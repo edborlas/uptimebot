@@ -11,7 +11,7 @@ const INTERVAL_MS = INTERVAL_MIN * 60 * 1000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const LOG_DIR = path.resolve(__dirname, '..', 'logs');
+const LOG_DIR = path.resolve(path.dirname(__dirname), 'logs');
 
 const UP_LOG = path.join(LOG_DIR, 'up.log');
 const DOWN_LOG = path.join(LOG_DIR, 'down.log');
@@ -119,6 +119,60 @@ const server = http.createServer((req, res) => {
     res.setHeader('Content-Type', 'text/plain'); fs.createReadStream(target).pipe(res); return;
   }
 
+  if (req.method === 'GET' && req.url === '/pinger') {
+    debugger;
+    console.log('DEBUG: Received request for /pinger');
+    const pingerLogPath = path.join(LOG_DIR, 'pinger.log');
+    console.log('DEBUG: Resolved path for pinger.log:', pingerLogPath);
+    if (!fs.existsSync(pingerLogPath)) {
+      console.error('DEBUG: pinger.log not found at:', pingerLogPath);
+      res.statusCode = 404;
+      res.end('Pinger log not found');
+      return;
+    }
+    console.log('DEBUG: pinger.log exists, serving the file.');
+    res.setHeader('Content-Type', 'text/plain');
+    fs.createReadStream(pingerLogPath).pipe(res);
+    console.log('DEBUG: Successfully served pinger.log');
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/app') {
+    const appLogPath = path.join(LOG_DIR, 'app.log');
+    if (!fs.existsSync(appLogPath)) {
+      res.statusCode = 404;
+      res.end('App log not found');
+      return;
+    }
+    res.setHeader('Content-Type', 'text/plain');
+    fs.createReadStream(appLogPath).pipe(res);
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/up') {
+    const upLogPath = path.join(LOG_DIR, 'up.log');
+    if (!fs.existsSync(upLogPath)) {
+      res.statusCode = 404;
+      res.end('up log not found');
+      return;
+    }
+    res.setHeader('Content-Type', 'text/plain');
+    fs.createReadStream(upLogPath).pipe(res);
+    return;
+  }
+
+   if (req.method === 'GET' && req.url === '/down') {
+    const downLogPath = path.join(LOG_DIR, 'down.log');
+    if (!fs.existsSync(downLogPath)) {
+      res.statusCode = 404;
+      res.end('down log not found');
+      return;
+    }
+    res.setHeader('Content-Type', 'text/plain');
+    fs.createReadStream(downLogPath).pipe(res);
+    return;
+  }
+
   res.statusCode = 404; res.end('Not found');
 });
 
@@ -137,3 +191,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   loop();
   setInterval(loop, INTERVAL_MS);
 }
+
+console.log('DEBUG: LOG_DIR is set to:', LOG_DIR);

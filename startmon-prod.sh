@@ -7,7 +7,7 @@ if lsof -i :4100 > /dev/null; then
 fi
 
 echo "Starting the pinger service..."
-node ./scripts/pinger.js > pinger.log 2>&1 &
+node ./scripts/pinger.js > ./logs/pinger.log 2>&1 &
 PINGER_PID=$!
 echo $PINGER_PID > .pinger_pid
 
@@ -22,7 +22,7 @@ if lsof -i :4173 > /dev/null; then
 fi
 
 echo "Starting the production server..."
-npm run preview > app.log 2>&1 &
+npm run preview > ./logs/app.log 2>&1 &
 PREVIEW_PID=$!
 echo $PREVIEW_PID > .dev_pid
 

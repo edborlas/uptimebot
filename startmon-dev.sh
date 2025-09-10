@@ -7,7 +7,7 @@ if lsof -i :4100 > /dev/null; then
 fi
 
 echo "Starting the pinger service..."
-node ./scripts/pinger.js > pinger.log 2>&1 &
+node ./scripts/pinger.js > ./logs/pinger.log 2>&1 &
 PINGER_PID=$!
 echo $PINGER_PID > .pinger_pid
 
@@ -18,7 +18,7 @@ if pgrep -f "npm run dev" > /dev/null; then
 fi
 
 echo "Starting the development server..."
-npm run dev > app.log 2>&1 &
+npm run dev > ./logs/app.log 2>&1 &
 DEV_PID=$!
 echo $DEV_PID > .dev_pid
 
