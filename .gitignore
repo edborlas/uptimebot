@@ -4,5 +4,7 @@ logs/up.log
 logs/down.log
 logs/app.log
 logs/pinger.log
-dist/assets/index-f9a933a7.js
-dist/assets/index-9840255a.css
+dist
+**/-1
+node_modules
+.DS_Store
