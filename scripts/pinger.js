@@ -28,7 +28,7 @@ const monitors = [
 ];
 
 // latest state in-memory
-const latest = monitors.map(m => ({ ...m, status: 'unknown', latency: null, downSince: null, lastChecked: null }));
+const latest = monitors.map(m => ({ ...m, status: 'unknown', latency: null, downSince: null, lastChecked: null, errorType: null }));
 
 function ensureLogDir() { if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true }); }
 function statSafe(p) { try { return fs.statSync(p); } catch (e) { return null; } }
@@ -55,18 +55,67 @@ function pingMonitor(m) {
     try {
       const url = new URL(m.url);
       const lib = url.protocol === 'https:' ? https : http;
-      const opts = { method: 'GET', timeout: 10000 };
+      const opts = { 
+        method: 'GET', 
+        timeout: 10000,
+        rejectUnauthorized: true // Ensure SSL certificate validation
+      };
       const start = Date.now();
       const req = lib.request(url, opts, (res) => {
         const latency = Date.now() - start;
         const status = res.statusCode >= 200 && res.statusCode < 405 ? 'up' : 'down'; // 400 - 404 are considered up
         res.resume();
-        resolve({ status, latency });
+        resolve({ status, latency, errorType: null });
       });
-      req.on('error', () => resolve({ status: 'down', latency: null }));
-      req.on('timeout', () => { req.destroy(); resolve({ status: 'down', latency: null }); });
+      
+      // Handle general errors (including SSL errors)
+      req.on('error', (err) => {
+        let errorType = 'network';
+        
+        // Check for SSL-specific errors
+        if (err.code === 'CERT_UNTRUSTED' || 
+            err.code === 'CERT_HAS_EXPIRED' ||
+            err.code === 'CERT_NOT_YET_VALID' ||
+            err.code === 'CERT_CHAIN_TOO_LONG' ||
+            err.code === 'CERT_REVOKED' ||
+            err.code === 'CERT_SIGNATURE_FAILURE' ||
+            err.code === 'UNABLE_TO_GET_ISSUER_CERT' ||
+            err.code === 'UNABLE_TO_GET_CRL' ||
+            err.code === 'UNABLE_TO_DECRYPT_CERT_SIGNATURE' ||
+            err.code === 'UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY' ||
+            err.code === 'CERT_SIGNATURE_FAILURE' ||
+            err.code === 'CRL_SIGNATURE_FAILURE' ||
+            err.code === 'CRL_NOT_YET_VALID' ||
+            err.code === 'CRL_HAS_EXPIRED' ||
+            err.code === 'ERROR_IN_CERT_NOT_BEFORE_FIELD' ||
+            err.code === 'ERROR_IN_CERT_NOT_AFTER_FIELD' ||
+            err.code === 'ERROR_IN_CRL_LAST_UPDATE_FIELD' ||
+            err.code === 'ERROR_IN_CRL_NEXT_UPDATE_FIELD' ||
+            err.code === 'OUT_OF_MEM' ||
+            err.code === 'DEPTH_ZERO_SELF_SIGNED_CERT' ||
+            err.code === 'SELF_SIGNED_CERT_IN_CHAIN' ||
+            err.code === 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY' ||
+            err.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' ||
+            err.code === 'CERT_REJECTED' ||
+            err.code === 'HOSTNAME_MISMATCH' ||
+            err.message.includes('certificate') ||
+            err.message.includes('SSL') ||
+            err.message.includes('TLS')) {
+          errorType = 'ssl';
+          console.log(`SSL/Certificate error for ${m.name}: ${err.code || err.message}`);
+        }
+        resolve({ status: 'down', latency: null, errorType });
+      });
+      
+      req.on('timeout', () => { 
+        req.destroy(); 
+        resolve({ status: 'down', latency: null, errorType: 'timeout' }); 
+      });
+      
       req.end();
-    } catch (e) { resolve({ status: 'down', latency: null }); }
+    } catch (e) { 
+      resolve({ status: 'down', latency: null, errorType: 'network' }); 
+    }
   });
 }
 
@@ -82,6 +131,7 @@ async function runOnce() {
     const prev = latest[i];
     prev.lastChecked = nowIso; // ISO for UI calcs
     prev.latency = res.latency;
+    prev.errorType = res.errorType;
     if (res.status === 'down') {
       if (!prev.downSince) prev.downSince = nowIso;
       prev.status = 'down';
@@ -90,6 +140,7 @@ async function runOnce() {
     } else {
       prev.status = 'up';
       prev.downSince = null;
+      prev.errorType = null;
       writeLine(UP_LOG, rec);
       truncateUpLogIfNeeded();
     }

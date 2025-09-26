@@ -3,13 +3,22 @@ import React from "react";
 const MonitorCard = ({ monitor }) => {
   const renderStatus = () => {
     if (monitor.status === 'down') {
+      let statusText = 'Down';
+      
+      // Check for specific error types
+      if (monitor.errorType === 'ssl') {
+        statusText = 'Down - SSL error';
+      } else if (monitor.errorType === 'timeout') {
+        statusText = 'Down - Timeout';
+      }
+      
       if (monitor.downSince) {
         const downSince = new Date(monitor.downSince);
         const diffMs = Date.now() - downSince.getTime();
         const minutes = Math.max(0, Math.floor(diffMs / 60000));
-        return `Down for ${minutes} minute${minutes === 1 ? '' : 's'}`;
+        return `${statusText} for ${minutes} minute${minutes === 1 ? '' : 's'}`;
       }
-      return 'Down';
+      return statusText;
     }
     return monitor.status === 'up' ? 'Up' : monitor.status;
   };
